@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👥 多用户待办事项</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .user-section { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .input-group { display: flex; margin: 15px 0; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-right: 10px; }
+        button { padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .task { padding: 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; }
+        .completed { text-decoration: line-through; color: #888; }
+        .task-actions { margin-left: auto; }
+        .user-badge { background: #4caf50; color: white; padding: 5px 10px; border-radius: 15px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 用户选择区域 -->
+        <div class="user-section">
+            <h3>👤 选择用户</h3>
+            <div class="input-group">
+                <input type="text" id="userName" placeholder="输入你的名字" value="默认用户">
+                <button onclick="switchUser()">切换用户</button>
+            </div>
+            <div>当前用户: <span class="user-badge" id="currentUser">默认用户</span></div>
+        </div>
+
+        <!-- 任务管理区域 -->
+        <h3>📝 待办事项</h3>
+        <div class="input-group">
+            <input type="text" id="taskInput" placeholder="输入新任务..." autocomplete="off">
+            <button onclick="addTask()">添加任务</button>
+        </div>
+        
+        <div id="taskList"></div>
+    </div>
+
+    <script>
+        // 多用户任务管理
+        let currentUser = localStorage.getItem('currentUser') || '默认用户';
+        
+        function getStorageKey() {
+            return `todo_tasks_${currentUser}`;
+        }
+        
+        function loadTasks() {
+            return JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+        }
+        
+        function saveTasks(tasks) {
+            localStorage.setItem(getStorageKey(), JSON.stringify(tasks));
+            render();
+        }
+        
+        function switchUser() {
+            const newUser = document.getElementById('userName').value.trim() || '默认用户';
+            if (newUser !== currentUser) {
+                currentUser = newUser;
+                localStorage.setItem('currentUser', currentUser);
+                document.getElementById('currentUser').textContent = currentUser;
+                render();
+            }
+        }
+        
+        function render() {
+            document.getElementById('currentUser').textContent = currentUser;
+            document.getElementById('userName').value = currentUser;
+            
+            const tasks = loadTasks();
+            const taskList = document.getElementById('taskList');
+            
+            if (tasks.length === 0) {
+                taskList.innerHTML = '<div style="text-align:center;color:#999;padding:20px;">暂无任务</div>';
+                return;
+            }
+            
+            taskList.innerHTML = tasks.map((task, index) => `
+                <div class="task ${task.completed ? 'completed' : ''}">
+                    <span>${task.completed ? '✅' : '□'} ${task.text}</span>
+                    <div class="task-actions">
+                        <button onclick="toggleTask(${index})">${task.completed ? '取消' : '完成'}</button>
+                        <button onclick="deleteTask(${index})">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const text = input.value.trim();
+            
+            if (text) {
+                const tasks = loadTasks();
+                tasks.push({
+                    text: text,
+                    completed: false,
+                    createdAt: new Date().toLocaleString()
+                });
+                saveTasks(tasks);
+                input.value = '';
+            }
+        }
+        
+        function toggleTask(index) {
+            const tasks = loadTasks();
+            tasks[index].completed = !tasks[index].completed;
+            saveTasks(tasks);
+        }
+        
+        function deleteTask(index) {
+            if (confirm('确定删除这个任务吗？')) {
+                const tasks = loadTasks();
+                tasks.splice(index, 1);
+                saveTasks(tasks);
+            }
+        }
+        
+        // 初始化
+        document.getElementById('taskInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addTask();
+        });
+        
+        document.getElementById('userName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') switchUser();
+        });
+        
+        render();
+    </script>
+</body>
+</html>
